@@ -3,7 +3,6 @@ pragma solidity ^0.8.18;
 
 import "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/ERC721A/contracts/ERC721A.sol";
 
@@ -15,20 +14,37 @@ contract Napoli is ERC721A {
     using Strings for uint256;
     using SafeERC20 for IERC20;
 
+    // =============================================================
+    //                           Immutables
+    // =============================================================
+
     /// @dev token used
     address public immutable token;
 
     /// @dev price per ticket
     uint256 public immutable price;
 
-    /// @dev total tickets sold
-    uint256 public totalTickets;
+    // =============================================================
+    //                            Errors
+    // =============================================================
 
     /// @dev not enough following deposits
     error TooEarly();
 
     /// @dev cannot redeem on behalf on this token
     error Auth();
+
+    // =============================================================
+    //                            Events
+    // =============================================================
+
+    event Purchase(address account, uint256 quantity);
+
+    event Redeem(uint256 id);
+
+    // =============================================================
+    //                          Constructor
+    // =============================================================
 
     constructor(address _token, uint256 _price) ERC721A("NAPOLI", "NAPOLI") {
         token = _token;
@@ -48,6 +64,8 @@ contract Napoli is ERC721A {
 
         // mint token
         _mint(msg.sender, quantity);
+
+        emit Purchase(msg.sender, quantity);
     }
 
     /**
@@ -63,6 +81,8 @@ contract Napoli is ERC721A {
 
         // transfer 2x
         IERC20(token).safeTransfer(msg.sender, price * 2);
+
+        emit Redeem(id);
     }
 
     /**

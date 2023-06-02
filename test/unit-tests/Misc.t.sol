@@ -17,7 +17,7 @@ contract BuyTest is Test {
         napoli = new Napoli(address(weth), price);
     }
 
-    function testURL() public {
+    function testURL() public view {
         // assertion
         napoli.tokenURI(1);
     }
