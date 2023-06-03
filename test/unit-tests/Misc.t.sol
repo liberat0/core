@@ -14,11 +14,19 @@ contract BuyTest is Test {
     function setUp() public {
         weth = new MockERC20("WETH", "WETH");
 
-        napoli = new Napoli(address(weth), price);
+        napoli = new Napoli("https://napoli.testnet/", address(weth), price, 0, address(0));
     }
 
-    function testURL() public view {
+    function testURL() public {
         // assertion
-        napoli.tokenURI(1);
+        assertEq(napoli.tokenURI(1), "https://napoli.testnet/1");
+    }
+
+    function testSetRecipient() public {
+        // act
+        napoli.setRecipient(address(0xaa));
+
+        // assertion
+        assertEq(napoli.feeRecipient(), address(0xaa));
     }
 }

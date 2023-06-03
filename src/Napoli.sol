@@ -4,13 +4,16 @@ pragma solidity ^0.8.18;
 import "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "lib/ERC721A/contracts/ERC721A.sol";
+
+import "./INapoli.sol";
 
 /**
  * @title Napoli
  * @notice Napoli is a ponzi game, where the N th person who deposits, need to wait until 2xN total participants to get 2x and leave the pool
  */
-contract Napoli is ERC721A {
+contract Napoli is ERC721A, Ownable, INapoli {
     using Strings for uint256;
     using SafeERC20 for IERC20;
 
@@ -24,43 +27,68 @@ contract Napoli is ERC721A {
     /// @dev price per ticket
     uint256 public immutable price;
 
-    // =============================================================
-    //                            Errors
-    // =============================================================
-
-    /// @dev not enough following deposits
-    error TooEarly();
-
-    /// @dev cannot redeem on behalf on this token
-    error Auth();
+    /// @dev fee paid to fee recipient at deposit
+    uint256 public immutable fee;
 
     // =============================================================
-    //                            Events
+    //                            Storage
     // =============================================================
 
-    event Purchase(address account, uint256 quantity);
+    /// @dev base url that cannot be changed
+    string private base;
 
-    event Redeem(uint256 id);
+    /// @dev fee recipient address
+    address public feeRecipient;
 
     // =============================================================
     //                          Constructor
     // =============================================================
 
-    constructor(address _token, uint256 _price) ERC721A("NAPOLI", "NAPOLI") {
+    constructor(string memory _base, address _token, uint256 _price, uint256 _fee, address _feeRecipient)
+        ERC721A("NAPOLI", "NAPOLI")
+    {
+        base = _base;
         token = _token;
         price = _price;
+        fee = _fee;
+        feeRecipient = _feeRecipient;
     }
 
-    function tokenURI(uint256 id) public pure override returns (string memory uri) {
-        uri = string.concat("https://", id.toString());
+    // =============================================================
+    //                         View Functions
+    // =============================================================
+
+    /**
+     * @dev return uri which stores the token metadata
+     */
+    function tokenURI(uint256 id) public view override returns (string memory uri) {
+        uri = string.concat(base, id.toString());
+    }
+
+    // =============================================================
+    //                         Owner Settings
+    // =============================================================
+
+    /**
+     * @dev owner can set the new recipient, but cannot change the fee
+     */
+    function setRecipient(address newRecipient) external onlyOwner {
+        feeRecipient = newRecipient;
+
+        emit FeeRecipientUpdated(newRecipient);
     }
 
     /**
      * @dev buy tickets
      */
     function buy(uint256 quantity) external {
-        // transfer from
-        IERC20(token).safeTransferFrom(msg.sender, address(this), quantity * price);
+        // transfer price to lock in
+        IERC20(token).safeTransferFrom(msg.sender, address(this), price * quantity);
+
+        // transfer fee
+        if (fee != 0 && feeRecipient != address(0)) {
+            IERC20(token).safeTransferFrom(msg.sender, feeRecipient, fee * quantity);
+        }
 
         // mint token
         _mint(msg.sender, quantity);

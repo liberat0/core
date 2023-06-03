@@ -10,10 +10,12 @@ contract Redeem is Test {
     Napoli public napoli;
     MockERC20 public weth;
     uint256 public price = 20e18;
+    uint256 public fee = 2e18;
+    address public feeRecipient = address(0xdead);
 
     function setUp() public {
         weth = new MockERC20("WETH", "WETH");
-        napoli = new Napoli(address(weth), price);
+        napoli = new Napoli("https://napoli.testnet/", address(weth), price, fee, feeRecipient);
 
         weth.mint(address(this), 200e18);
         weth.approve(address(napoli), type(uint256).max);
@@ -47,7 +49,7 @@ contract Redeem is Test {
         napoli.redeem(1);
 
         // act
-        vm.expectRevert();
+        vm.expectRevert(IERC721A.OwnerQueryForNonexistentToken.selector);
         napoli.redeem(1);
     }
 
@@ -56,7 +58,7 @@ contract Redeem is Test {
         napoli.buy(1);
 
         // act
-        vm.expectRevert(Napoli.TooEarly.selector);
+        vm.expectRevert(INapoli.TooEarly.selector);
         napoli.redeem(1);
     }
 
@@ -65,7 +67,7 @@ contract Redeem is Test {
         napoli.buy(2);
 
         // act
-        vm.expectRevert(Napoli.Auth.selector);
+        vm.expectRevert(INapoli.Auth.selector);
         vm.prank(address(0xbeef));
         napoli.redeem(1);
     }

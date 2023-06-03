@@ -9,14 +9,18 @@ import "../mocks/MockERC20.sol";
 contract BuyTest is Test {
     Napoli public napoli;
     MockERC20 public weth;
+
     uint256 public price = 20e18;
+    uint256 public fee = 2e18;
+
+    address feeRecipient = address(0xdead);
 
     function setUp() public {
         weth = new MockERC20("WETH", "WETH");
 
-        napoli = new Napoli(address(weth), price);
+        napoli = new Napoli("https://napoli.testnet/", address(weth), price, fee, feeRecipient);
 
-        weth.mint(address(this), 200e18);
+        weth.mint(address(this), 2000e18);
         weth.approve(address(napoli), type(uint256).max);
     }
 
@@ -29,6 +33,7 @@ contract BuyTest is Test {
         assertEq(napoli.ownerOf(1), address(this));
         assertEq(napoli.totalSold(), 1);
         assertEq(weth.balanceOf(address(napoli)), price);
+        assertEq(weth.balanceOf(address(feeRecipient)), fee);
     }
 
     function testBuyTen() public {
@@ -40,5 +45,6 @@ contract BuyTest is Test {
         assertEq(napoli.ownerOf(10), address(this));
         assertEq(napoli.totalSold(), 10);
         assertEq(weth.balanceOf(address(napoli)), price * 10);
+        assertEq(weth.balanceOf(address(feeRecipient)), fee * 10);
     }
 }
