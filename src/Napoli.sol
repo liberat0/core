@@ -79,36 +79,50 @@ contract Napoli is ERC721A, Ownable, INapoli {
     }
 
     /**
-     * @dev buy tickets
+     * @notice buy tickets
      */
     function buy(uint256 quantity) external {
-        // transfer price to lock in
-        IERC20(token).safeTransferFrom(msg.sender, address(this), price * quantity);
-
-        // transfer fee
-        if (fee != 0 && feeRecipient != address(0)) {
-            IERC20(token).safeTransferFrom(msg.sender, feeRecipient, fee * quantity);
-        }
-
-        // mint token
-        _mint(msg.sender, quantity);
-
-        emit Purchase(msg.sender, quantity);
+        _buy(quantity, msg.sender);
     }
 
     /**
-     * @dev redeem ticket when total price is enough
+     * @notice redeem ticket when total supply is high enough
      */
-    function redeem(uint256 id) public {
+    function redeem(uint256 id) external {
+        _redeem(id, msg.sender);
+    }
+
+    /**
+     * @dev transfer quantity and fee from sender, mint receipt in return
+     */
+    function _buy(uint256 quantity, address from) internal {
+        // transfer price to lock in
+        IERC20(token).safeTransferFrom(from, address(this), price * quantity);
+
+        // transfer fee
+        if (fee != 0 && feeRecipient != address(0)) {
+            IERC20(token).safeTransferFrom(from, feeRecipient, fee * quantity);
+        }
+
+        // mint token
+        _mint(from, quantity);
+
+        emit Purchase(from, quantity);
+    }
+
+    /**
+     * @dev burn token and get back 2x price when there is enough total minters
+     */
+    function _redeem(uint256 id, address sender) internal {
         // check msg.sender
-        if (msg.sender != ownerOf(id)) revert Auth();
+        if (sender != ownerOf(id)) revert Auth();
         if (_nextTokenId() - 1 < id * 2) revert TooEarly();
 
         // burn receipt
         _burn(id);
 
         // transfer 2x
-        IERC20(token).safeTransfer(msg.sender, price * 2);
+        IERC20(token).safeTransfer(sender, price * 2);
 
         emit Redeem(id);
     }

@@ -17,3 +17,11 @@
 ```
 forge build && forge test
 ```
+
+## Symbolic execution
+
+We have symbolic execution tests in written with [halmos](https://github.com/a16z/halmos). 
+
+```
+halmos --contract NapoliInvariants
+```
